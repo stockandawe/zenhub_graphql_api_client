@@ -7,12 +7,12 @@ module ZenhubGraphQLApiClient
   class Client
     attr_reader :api_key, :api_url
 
-    def initialize(api_key, api_url = 'https://api.zenhub.com/public/graphql')
-      @api_key = api_key
+    def initialize(api_key_string, api_url = 'https://api.zenhub.com/public/graphql')
+      @api_key = api_key_string
       @api_url = api_url
     end
 
-    def get_epic_estimate(epic_id)
+    def get_epic_total_estimate(epic_id)
       query = <<-GRAPHQL
         query epicIssues($epicId: ID!) {
           node(id: $epicId) {
@@ -34,13 +34,32 @@ module ZenhubGraphQLApiClient
         }
       GRAPHQL
 
-      response = execute_query(query, { epicId: epic_id })
-      # Process response and return structured data
-      # ...
+      response_body = execute_query(query, { epicId: epic_id })
+
+      # Check for errors in the response
+      if response_body['errors']
+        puts "Error fetching data from Zenhub: #{response_body['errors'].map { |e| e['message'] }.join(', ')}"
+        return nil # Or raise an exception
+      elsif response_body['data'] && response_body['data']['node'] && response_body['data']['node']['childIssues']
+        epic_data = response_body['data']['node']
+        child_issues = epic_data['childIssues']['nodes']
+
+        total_estimate = 0
+        child_issues.each do |issue|
+          estimate_value = issue['estimate'] ? issue['estimate']['value'] : 0
+          total_estimate += estimate_value
+        end
+
+        return total_estimate
+      else
+        puts "Could not retrieve epic data for ID: #{epic_id}. Please check the Epic ID and API key."
+        puts "Response body: #{response_body}"
+        return nil # Or raise an exception
+      end
     end
 
     def get_epics_from_workspace(workspace_id)
-      query = <<-GRAPHQL
+      query = <<~GRAPHQL
         query epicsFromWorkspace($workspaceId: ID!) {
           workspace(id: $workspaceId) {
             epics {
@@ -55,7 +74,26 @@ module ZenhubGraphQLApiClient
         }
       GRAPHQL
 
-      execute_query(query, { workspaceId: workspace_id })
+      response_body = execute_query(query, { workspaceId: workspace_id })
+
+      if response_body['errors']
+        puts "Error fetching epics: #{response_body['errors'].map { |e| e['message'] }.join(', ')}"
+        return nil
+      end
+
+      # Adapt the response structure to match the expected data path
+      if response_body['data'] && response_body['data']['workspace'] && response_body['data']['workspace']['epics'] && response_body['data']['workspace']['epics']['nodes']
+        response_body['data']['workspace']['epics']['nodes'].map do |epic|
+          {
+            id: epic['id'],
+            title: epic['issue']['title']
+          }
+        end
+      else
+        puts "Could not retrieve epic data for workspace ID: #{workspace_id}."
+        puts "Response body: #{response_body}"
+        return nil
+      end
     end
 
     private
