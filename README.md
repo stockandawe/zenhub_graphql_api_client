@@ -33,6 +33,9 @@ epic_data = client.get_epic_estimate('your_epic_id')
 
 # Get epics from workspace
 epics = client.get_epics_from_workspace('your_workspace_id')
+
+# Get issue info
+issue_data = client.get_issue_info('your_repository_id', 'your_issue_number')
 ```
 
 ## Development
