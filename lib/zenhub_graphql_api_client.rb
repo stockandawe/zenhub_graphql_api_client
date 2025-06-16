@@ -96,6 +96,55 @@ module ZenhubGraphQLApiClient
       end
     end
 
+    def get_issue_info(repository_id, issue_number)
+      query = <<~GRAPHQL
+        query ($repositoryGhId: Int, $repositoryId: ID, $issueNumber: Int!) {
+            issueByInfo(
+                repositoryGhId: $repositoryGhId
+                repositoryId: $repositoryId
+                issueNumber: $issueNumber
+            ) {
+                    id
+                    number
+                    title
+                    body
+                    state
+                    estimate {
+                      value
+                    }
+                    sprints (first: 10) {
+                      nodes {
+                        id
+                        name
+                      }
+                    }
+                    labels (first: 10) {
+                      nodes {
+                        id
+                        name
+                        color
+                      }
+                    }
+                  }
+        }
+      GRAPHQL
+
+      response_body = execute_query(query, { repositoryId: repository_id, issueNumber: issue_number })
+
+      if response_body['errors']
+        puts "Error fetching issue info: #{response_body['errors'].map { |e| e['message'] }.join(', ')}"
+        return nil
+      end
+
+      if response_body['data'] && response_body['data']['issueByInfo']
+        response_body['data']['issueByInfo']
+      else
+        puts "Could not retrieve issue info for repositoryId: #{repository_id}, issueNumber: #{issue_number}."
+        puts "Response body: #{response_body}"
+        return nil
+      end
+    end
+
     private
 
     def execute_query(query, variables)
