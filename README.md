@@ -34,6 +34,12 @@ workspace_id = client.get_workspace_id('your_workspace_name')
 # Get workspace info
 workspace_info = client.get_workspace_info(workspace_id)
 
+# Get workspace issues
+workspace_issues = client.get_workspace_issues(workspace_id)
+
+# Get workspace sprints
+workspace_sprints = client.get_workspace_sprints(workspace_id)
+
 # Get epic estimate
 epic_data = client.get_epic_estimate('your_epic_id')
 

@@ -229,7 +229,7 @@ module ZenhubGraphQLApiClient
       end
     end
 
-    def get_all_issues_in_workspace(workspace_id)
+    def get_workspace_issues(workspace_id)
       query = <<~GRAPHQL
         query workspaceIssues($workspaceId: ID!) {
           workspace(id: $workspaceId) {
@@ -256,6 +256,42 @@ module ZenhubGraphQLApiClient
         response_body['data']['workspace']['issues']['nodes']
       else
         puts "Could not retrieve issue data for workspace ID: #{workspace_id}."
+        puts "Response body: #{response_body}"
+        return nil
+      end
+    end
+
+    def get_workspace_sprints(workspace_id)
+      query = <<~GRAPHQL
+        query workspaceSprints($workspaceId: ID!) {
+          workspace(id: $workspaceId){
+            sprints{
+              totalCount
+              nodes {
+                id
+                name
+                completedPoints
+                closedIssuesCount
+                state
+                startAt
+                endAt
+              }
+            }
+          }
+        }
+      GRAPHQL
+
+      response_body = execute_query(query, { workspaceId: workspace_id })
+
+      if response_body['errors']
+        puts "Error fetching sprint info: #{response_body['errors'].map { |e| e['message'] }.join(', ')}"
+        return nil
+      end
+
+      if response_body['data'] && response_body['data']['workspace'] && response_body['data']['workspace']['sprints']
+        response_body['data']['workspace']['sprints']
+      else
+        puts "Could not retrieve sprint data for workspace ID: #{workspace_id}."
         puts "Response body: #{response_body}"
         return nil
       end
