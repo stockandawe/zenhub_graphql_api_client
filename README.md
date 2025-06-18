@@ -28,6 +28,12 @@ $ gem install zenhub_graphql_api_client
 # Initialize the client
 client = ZenhubGraphQLApiClient::Client.new('your_zenhub_api_key')
 
+# Get workspace ID
+workspace_id = client.get_workspace_id('your_workspace_name')
+
+# Get workspace info
+workspace_info = client.get_workspace_info(workspace_id)
+
 # Get epic estimate
 epic_data = client.get_epic_estimate('your_epic_id')
 

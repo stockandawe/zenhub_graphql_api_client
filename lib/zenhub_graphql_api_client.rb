@@ -145,6 +145,84 @@ module ZenhubGraphQLApiClient
       end
     end
 
+    def get_workspace_info(workspace_id)
+      query = <<~GRAPHQL
+        query ($workspaceId: ID!) {
+            workspace(id: $workspaceId) {
+                id
+                displayName
+            }
+        }
+      GRAPHQL
+
+      response_body = execute_query(query, { workspaceId: workspace_id })
+
+      if response_body['errors']
+        puts "Error fetching workspace: #{response_body['errors'].map { |e| e['message'] }.join(', ')}"
+        return nil
+      end
+
+      if response_body['data'] && response_body['data']['workspace']
+        response_body['data']['workspace']
+      else
+        puts "Could not retrieve workspace data for ID: #{workspace_id}."
+        puts "Response body: #{response_body}"
+        return nil
+      end
+    end
+
+    def get_workspace_id(workspace_name)
+      query = <<~GRAPHQL
+        query searchWorkspaces($workspaceName: String!) {
+          viewer {
+            id
+            searchWorkspaces(query: $workspaceName) {
+              nodes {
+                id
+                name
+                repositoriesConnection {
+                  nodes {
+                    id
+                    name
+                  }
+                }
+              }
+            }
+          }
+        }
+      GRAPHQL
+
+      variables = { workspaceName: workspace_name }
+      response_body = execute_query(query, variables)
+
+      if response_body['errors']
+        puts "Error searching for workspace: #{response_body['errors'].map { |e| e['message'] }.join(', ')}"
+        return nil
+      end
+
+      if response_body['data'] &&
+         response_body['data']['viewer'] &&
+         response_body['data']['viewer']['searchWorkspaces'] &&
+         response_body['data']['viewer']['searchWorkspaces']['nodes'] &&
+         !response_body['data']['viewer']['searchWorkspaces']['nodes'].empty?
+
+        found_workspace = response_body['data']['viewer']['searchWorkspaces']['nodes'].find do |node|
+          node['name'] == workspace_name
+        end
+
+        if found_workspace
+          return found_workspace['id']
+        else
+          puts "Workspace with name '#{workspace_name}' not found."
+          return nil
+        end
+      else
+        puts "Could not find workspace with name '#{workspace_name}'."
+        puts "Response body: #{response_body}"
+        return nil
+      end
+    end
+
     private
 
     def execute_query(query, variables)
@@ -162,7 +240,20 @@ module ZenhubGraphQLApiClient
       http.use_ssl = true
 
       response = http.request(request)
-      JSON.parse(response.body)
+
+      # Check if the response body is empty
+      if response.body.nil? || response.body.empty?
+        puts "Error: Received empty response body from Zenhub API."
+        return {} # Return an empty hash or handle as appropriate
+      end
+
+      begin
+        JSON.parse(response.body)
+      rescue JSON::ParserError => e
+        puts "Error parsing JSON response from Zenhub API: #{e.message}"
+        puts "Response body: #{response.body}"
+        return {} # Return an empty hash or handle as appropriate
+      end
     end
   end
 end
