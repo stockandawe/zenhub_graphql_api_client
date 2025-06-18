@@ -151,6 +151,12 @@ module ZenhubGraphQLApiClient
             workspace(id: $workspaceId) {
                 id
                 displayName
+                pipelinesConnection {
+                  nodes {
+                    id
+                    name
+                  }
+                }
             }
         }
       GRAPHQL
