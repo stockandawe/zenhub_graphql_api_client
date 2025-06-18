@@ -58,7 +58,7 @@ module ZenhubGraphQLApiClient
       end
     end
 
-    def get_epics_from_workspace(workspace_id)
+    def get_workspace_epics(workspace_id)
       query = <<~GRAPHQL
         query epicsFromWorkspace($workspaceId: ID!) {
           workspace(id: $workspaceId) {
