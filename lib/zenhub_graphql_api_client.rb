@@ -223,6 +223,38 @@ module ZenhubGraphQLApiClient
       end
     end
 
+    def get_all_issues_in_workspace(workspace_id)
+      query = <<~GRAPHQL
+        query workspaceIssues($workspaceId: ID!) {
+          workspace(id: $workspaceId) {
+            issues {
+              nodes {
+                id
+                pullRequest
+                type
+                title
+              }
+            }
+          }
+        }
+      GRAPHQL
+
+      response_body = execute_query(query, { workspaceId: workspace_id })
+
+      if response_body['errors']
+        puts "Error fetching issues: #{response_body['errors'].map { |e| e['message'] }.join(', ')}"
+        return nil
+      end
+
+      if response_body['data'] && response_body['data']['workspace'] && response_body['data']['workspace']['issues'] && response_body['data']['workspace']['issues']['nodes']
+        response_body['data']['workspace']['issues']['nodes']
+      else
+        puts "Could not retrieve issue data for workspace ID: #{workspace_id}."
+        puts "Response body: #{response_body}"
+        return nil
+      end
+    end
+
     private
 
     def execute_query(query, variables)
